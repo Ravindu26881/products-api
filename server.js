@@ -33,4 +33,4 @@ app.post('/products', async (req, res) => {
     res.status(201).json(product);
 });
 
-app.listen(PORT, () => console.log(`Product API running on port ${PORT}`));
+app.listen(process.env.PORT || 5000);
