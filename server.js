@@ -1,6 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const sharp = require('sharp');
+const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
@@ -29,9 +31,38 @@ app.get('/products', async (req, res) => {
 });
 
 app.post('/products', async (req, res) => {
-    const product = new Product(req.body);
-    await product.save();
-    res.status(201).json(product);
+    try {
+        const productData = { ...req.body };
+        
+        // If image URL is provided, compress it and save as imageTemp
+        if (productData.image) {
+            try {
+                // Download the image
+                const response = await axios.get(productData.image, {
+                    responseType: 'arraybuffer'
+                });
+                
+                // Compress the image using sharp
+                const compressedImageBuffer = await sharp(response.data)
+                    .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+                
+                // Convert to base64 for storage
+                const compressedImageBase64 = `data:image/jpeg;base64,${compressedImageBuffer.toString('base64')}`;
+                productData.imageTemp = compressedImageBase64;
+            } catch (imageError) {
+                console.error('Error processing image:', imageError);
+                // Continue without image compression if it fails
+            }
+        }
+        
+        const product = new Product(productData);
+        await product.save();
+        res.status(201).json(product);
+    } catch (error) {
+        res.status(500).json({ error: 'Error creating product' });
+    }
 });
 
 app.delete('/products/:id', async (req, res) => {
