@@ -6,6 +6,8 @@ const storeSchema = new mongoose.Schema({
     address: { type: String, required: false },
     phone: { type: String, required: false },
     email: { type: String, required: false },
+    owner: { type: String, required: true },
+    category: { type: String, required: true },
     isActive: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now }
 });
