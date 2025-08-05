@@ -19,12 +19,11 @@ mongoose.connect(process.env.MONGO_URI, {
     .catch(err => console.error('DB connection error:', err));
 
 const Product = require('./models/Product');
-const User = require('./models/User');
 const Store = require('./models/Store');
 
 app.get('/stores', async (req, res) => {
     try {
-        const stores = await Store.find().populate('owner', 'username email');
+        const stores = await Store.find();
         res.json(stores);
     } catch (error) {
         res.status(500).json({ error: 'Error fetching stores' });
@@ -33,7 +32,7 @@ app.get('/stores', async (req, res) => {
 
 app.get('/stores/:id', async (req, res) => {
     try {
-        const store = await Store.findById(req.params.id).populate('owner', 'username email');
+        const store = await Store.findById(req.params.id);
         if (!store) {
             return res.status(404).json({ error: 'Store not found' });
         }
@@ -47,8 +46,7 @@ app.post('/stores', async (req, res) => {
     try {
         const store = new Store(req.body);
         await store.save();
-        const populatedStore = await Store.findById(store._id).populate('owner', 'username email');
-        res.status(201).json(populatedStore);
+        res.status(201).json(store);
     } catch (error) {
         res.status(500).json({ error: 'Error creating store' });
     }
@@ -60,7 +58,7 @@ app.put('/stores/:id', async (req, res) => {
             req.params.id,
             req.body,
             { new: true, runValidators: true }
-        ).populate('owner', 'username email');
+        );
         if (!store) {
             return res.status(404).json({ error: 'Store not found' });
         }
@@ -229,61 +227,6 @@ app.delete('/products/:id', async (req, res) => {
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Error deleting product' });
-    }
-});
-
-app.get('/users', async (req, res) => {
-    try {
-        const users = await User.find().select('-password');
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching users' });
-    }
-});
-
-app.post('/users', async (req, res) => {
-    try {
-        const user = new User(req.body);
-        await user.save();
-        const userResponse = user.toObject();
-        delete userResponse.password;
-        res.status(201).json(userResponse);
-    } catch (error) {
-        if (error.code === 11000) {
-            res.status(400).json({ error: 'Username or email already exists' });
-        } else {
-            res.status(500).json({ error: 'Error creating user' });
-        }
-    }
-});
-
-app.delete('/users/:id', async (req, res) => {
-    try {
-        const user = await User.findByIdAndDelete(req.params.id);
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-        res.json({ message: 'User deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: 'Error deleting user' });
-    }
-});
-
-// User login route
-app.post('/users/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        const user = await User.findOne({ username, password });
-        
-        if (!user) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-        
-        const userResponse = user.toObject();
-        delete userResponse.password; // Remove password from response
-        res.json(userResponse);
-    } catch (error) {
-        res.status(500).json({ error: 'Error during login' });
     }
 });
 
