@@ -81,6 +81,39 @@ app.delete('/stores/:id', async (req, res) => {
     }
 });
 
+// Login endpoint for store owners
+app.post('/stores/login', async (req, res) => {
+    try {
+        const { username } = req.body;
+        
+        if (!username) {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+        
+        // Find store by username
+        const store = await Store.findOne({ username: username });
+        
+        if (!store) {
+            return res.status(404).json({ error: 'Store not found with this username' });
+        }
+        
+        // Return store data including password (as requested - simple auth)
+        res.json({
+            success: true,
+            store: {
+                id: store._id,
+                name: store.name,
+                username: store.username,
+                password: store.password,
+                email: store.email,
+                owner: store.owner
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error during login' });
+    }
+});
+
 app.get('/products', async (req, res) => {
     try {
         const { storeId } = req.query;

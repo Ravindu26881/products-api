@@ -7,6 +7,8 @@ const storeSchema = new mongoose.Schema({
     phone: { type: String, required: false },
     email: { type: String, required: false },
     owner: { type: String, required: true },
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
     image: { type: String, required: false },
     category: { type: String, required: true },
     isActive: { type: Boolean, default: true },
