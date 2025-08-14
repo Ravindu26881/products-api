@@ -48,7 +48,7 @@ app.post('/stores', async (req, res) => {
         await store.save();
         res.status(201).json(store);
     } catch (error) {
-        res.status(500).json({ error: 'Error creating store' });
+        res.status(500).json({ error: error });
     }
 });
 
