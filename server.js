@@ -81,8 +81,8 @@ app.delete('/stores/:id', async (req, res) => {
     }
 });
 
-// Login endpoint for store owners
-app.post('/stores/login', async (req, res) => {
+// Check if username exists and return basic store info
+app.post('/stores/check-username', async (req, res) => {
     try {
         const { username } = req.body;
         
@@ -97,20 +97,53 @@ app.post('/stores/login', async (req, res) => {
             return res.status(404).json({ error: 'Store not found with this username' });
         }
         
-        // Return store data including password (as requested - simple auth)
+        // Return basic store info (no password)
         res.json({
             success: true,
             store: {
                 id: store._id,
                 name: store.name,
-                username: store.username,
-                password: store.password,
-                email: store.email,
-                owner: store.owner
+                owner: store.owner,
+                username: store.username
             }
         });
     } catch (error) {
-        res.status(500).json({ error: 'Error during login' });
+        res.status(500).json({ error: 'Error checking username' });
+    }
+});
+
+// Verify password for store login
+app.post('/stores/verify-password', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+        
+        // Find store by username
+        const store = await Store.findOne({ username: username });
+        
+        if (!store) {
+            return res.status(404).json({ error: 'Store not found with this username' });
+        }
+        
+        // Check if password matches
+        const passwordMatches = store.password === password;
+        
+        res.json({
+            success: true,
+            passwordMatches: passwordMatches,
+            store: passwordMatches ? {
+                id: store._id,
+                name: store.name,
+                owner: store.owner,
+                username: store.username,
+                email: store.email
+            } : null
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error verifying password' });
     }
 });
 
