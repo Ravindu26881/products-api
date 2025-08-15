@@ -81,6 +81,58 @@ app.delete('/stores/:id', async (req, res) => {
     }
 });
 
+// Update store location coordinates
+app.put('/stores/:id/location', async (req, res) => {
+    try {
+        const { lat, long } = req.body;
+        
+        // Validate required coordinates
+        if (typeof lat !== 'number' || typeof long !== 'number') {
+            return res.status(400).json({ 
+                error: 'Both latitude and longitude are required and must be numbers' 
+            });
+        }
+        
+        // Validate coordinate ranges
+        if (lat < -90 || lat > 90) {
+            return res.status(400).json({ 
+                error: 'Latitude must be between -90 and 90 degrees' 
+            });
+        }
+        
+        if (long < -180 || long > 180) {
+            return res.status(400).json({ 
+                error: 'Longitude must be between -180 and 180 degrees' 
+            });
+        }
+        
+        // Update store location coordinates
+        const store = await Store.findByIdAndUpdate(
+            req.params.id,
+            { 
+                'location.coordinates.lat': lat,
+                'location.coordinates.long': long
+            },
+            { new: true, runValidators: true }
+        );
+        
+        if (!store) {
+            return res.status(404).json({ error: 'Store not found' });
+        }
+        
+        res.json({
+            message: 'Store location updated successfully',
+            store: {
+                id: store._id,
+                name: store.name,
+                location: store.location
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error updating store location' });
+    }
+});
+
 // Check if username exists and return basic store info
 app.post('/stores/check-username', async (req, res) => {
     try {

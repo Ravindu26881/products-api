@@ -12,7 +12,14 @@ const storeSchema = new mongoose.Schema({
     image: { type: String, required: false },
     category: { type: String, required: true },
     isActive: { type: Boolean, default: true },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    location: {
+        coordinates: {
+            long: Number,
+            lat: Number,
+            required: false
+        }
+    }
 });
 
 module.exports = mongoose.model('Store', storeSchema);
