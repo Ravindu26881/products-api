@@ -84,23 +84,34 @@ app.delete('/stores/:id', async (req, res) => {
 // Update store location coordinates
 app.put('/stores/:id/location', async (req, res) => {
     try {
-        const { lat, long } = req.body;
+        const { lat, lng } = req.body;
         
         // Validate required coordinates
-        if (typeof lat !== 'number' || typeof long !== 'number') {
+        if (!lat || !lng) {
             return res.status(400).json({ 
-                error: 'Both latitude and longitude are required and must be numbers' 
+                error: 'Both latitude (lat) and longitude (lng) are required' 
             });
         }
         
-        // Validate coordinate ranges
-        if (lat < -90 || lat > 90) {
+        // Convert to string and validate coordinate ranges
+        const latStr = lat.toString();
+        const lngStr = lng.toString();
+        const latNum = parseFloat(lat);
+        const lngNum = parseFloat(lng);
+        
+        if (isNaN(latNum) || isNaN(lngNum)) {
+            return res.status(400).json({ 
+                error: 'Latitude and longitude must be valid numbers' 
+            });
+        }
+        
+        if (latNum < -90 || latNum > 90) {
             return res.status(400).json({ 
                 error: 'Latitude must be between -90 and 90 degrees' 
             });
         }
         
-        if (long < -180 || long > 180) {
+        if (lngNum < -180 || lngNum > 180) {
             return res.status(400).json({ 
                 error: 'Longitude must be between -180 and 180 degrees' 
             });
@@ -110,8 +121,8 @@ app.put('/stores/:id/location', async (req, res) => {
         const store = await Store.findByIdAndUpdate(
             req.params.id,
             { 
-                'location.coordinates.lat': lat,
-                'location.coordinates.long': long
+                locationLat: latStr,
+                locationLng: lngStr
             },
             { new: true, runValidators: true }
         );
@@ -125,7 +136,8 @@ app.put('/stores/:id/location', async (req, res) => {
             store: {
                 id: store._id,
                 name: store.name,
-                location: store.location
+                locationLat: store.locationLat,
+                locationLng: store.locationLng
             }
         });
     } catch (error) {

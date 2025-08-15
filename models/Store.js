@@ -13,13 +13,8 @@ const storeSchema = new mongoose.Schema({
     category: { type: String, required: true },
     isActive: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now },
-    location: {
-        coordinates: {
-            long: Number,
-            lat: Number,
-            required: false
-        }
-    }
+    locationLat: { type: String, required: false },
+    locationLng: { type: String, required: false },
 });
 
 module.exports = mongoose.model('Store', storeSchema);
