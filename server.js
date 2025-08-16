@@ -20,6 +20,8 @@ mongoose.connect(process.env.MONGO_URI, {
 
 const Product = require('./models/Product');
 const Store = require('./models/Store');
+const User = require('./models/User');
+const Order = require('./models/Order');
 
 app.get('/stores', async (req, res) => {
     try {
@@ -211,6 +213,149 @@ app.post('/stores/verify-password', async (req, res) => {
     }
 });
 
+// USER ENDPOINTS
+
+// Create new user
+app.post('/users', async (req, res) => {
+    try {
+        const { username, password, name, address, email, phone } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+        
+        // Check if username already exists
+        const existingUser = await User.findOne({ username: username });
+        if (existingUser) {
+            return res.status(409).json({ error: 'Username already exists' });
+        }
+        
+        const user = new User({
+            username,
+            password,
+            name,
+            address,
+            email,
+            phone
+        });
+        
+        await user.save();
+        
+        // Return user data without password
+        const { password: _, ...userResponse } = user.toObject();
+        res.status(201).json(userResponse);
+    } catch (error) {
+        res.status(500).json({ error: 'Error creating user' });
+    }
+});
+
+// Check if username exists
+app.post('/users/check-username', async (req, res) => {
+    try {
+        const { username } = req.body;
+        
+        if (!username) {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+        
+        const user = await User.findOne({ username: username });
+        
+        if (!user) {
+            return res.json({ exists: false });
+        }
+        
+        res.json({
+            exists: true,
+            user: {
+                id: user._id,
+                username: user.username,
+                name: user.name
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error checking username' });
+    }
+});
+
+// Check if username and password match (authentication)
+app.post('/users/authenticate', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+        
+        const user = await User.findOne({ username: username });
+        
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        
+        const passwordMatches = user.password === password;
+        
+        if (!passwordMatches) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        
+        // Return user data without password
+        const { password: _, ...userResponse } = user.toObject();
+        res.json({
+            success: true,
+            user: userResponse
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error authenticating user' });
+    }
+});
+
+// Get user details by user ID
+app.get('/users/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Return user data without password
+        const { password: _, ...userResponse } = user.toObject();
+        res.json(userResponse);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching user details' });
+    }
+});
+
+// Edit user details
+app.put('/users/:id', async (req, res) => {
+    try {
+        const { name, address, email, phone } = req.body;
+        const updateData = {};
+        
+        // Only include fields that are provided
+        if (name !== undefined) updateData.name = name;
+        if (address !== undefined) updateData.address = address;
+        if (email !== undefined) updateData.email = email;
+        if (phone !== undefined) updateData.phone = phone;
+        
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true, runValidators: true }
+        );
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Return user data without password
+        const { password: _, ...userResponse } = user.toObject();
+        res.json(userResponse);
+    } catch (error) {
+        res.status(500).json({ error: 'Error updating user details' });
+    }
+});
+
 app.get('/products', async (req, res) => {
     try {
         const { storeId } = req.query;
@@ -357,6 +502,121 @@ app.delete('/products/:id', async (req, res) => {
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Error deleting product' });
+    }
+});
+
+// ORDER ENDPOINTS
+
+// Create new order
+app.post('/orders', async (req, res) => {
+    try {
+        const { productId, storeId, userId, quantity } = req.body;
+        
+        if (!productId || !storeId || !userId) {
+            return res.status(400).json({ error: 'Product ID, Store ID, and User ID are required' });
+        }
+        
+        // Verify that the product, store, and user exist
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        
+        const store = await Store.findById(storeId);
+        if (!store) {
+            return res.status(404).json({ error: 'Store not found' });
+        }
+        
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Generate unique order ID
+        const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        const order = new Order({
+            orderId,
+            productId,
+            storeId,
+            userId,
+            quantity: quantity || 1
+        });
+        
+        await order.save();
+        
+        // Populate the order with related data
+        const populatedOrder = await Order.findById(order._id)
+            .populate('productId', 'name price category')
+            .populate('storeId', 'name address')
+            .populate('userId', 'username name email phone');
+        
+        res.status(201).json(populatedOrder);
+    } catch (error) {
+        res.status(500).json({ error: 'Error creating order' });
+    }
+});
+
+// Get order by order ID
+app.get('/orders/:orderId', async (req, res) => {
+    try {
+        const order = await Order.findOne({ orderId: req.params.orderId })
+            .populate('productId', 'name price category description')
+            .populate('storeId', 'name address phone email')
+            .populate('userId', 'username name email phone address');
+        
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        res.json(order);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching order' });
+    }
+});
+
+// Get orders by store ID
+app.get('/stores/:storeId/orders', async (req, res) => {
+    try {
+        const orders = await Order.find({ storeId: req.params.storeId })
+            .populate('productId', 'name price category')
+            .populate('storeId', 'name address')
+            .populate('userId', 'username name email phone')
+            .sort({ createdAt: -1 });
+        
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching store orders' });
+    }
+});
+
+// Get orders by user ID
+app.get('/users/:userId/orders', async (req, res) => {
+    try {
+        const orders = await Order.find({ userId: req.params.userId })
+            .populate('productId', 'name price category')
+            .populate('storeId', 'name address')
+            .populate('userId', 'username name email phone')
+            .sort({ createdAt: -1 });
+        
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching user orders' });
+    }
+});
+
+// Get all orders (optional endpoint for admin purposes)
+app.get('/orders', async (req, res) => {
+    try {
+        const orders = await Order.find()
+            .populate('productId', 'name price category')
+            .populate('storeId', 'name address')
+            .populate('userId', 'username name email phone')
+            .sort({ createdAt: -1 });
+        
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching orders' });
     }
 });
 
