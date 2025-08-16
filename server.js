@@ -218,7 +218,7 @@ app.get('/products', async (req, res) => {
         if (storeId) {
             query.store = storeId;
         }
-        const products = await Product.find(query).populate('store', 'name');
+        const products = await Product.find(query).populate('store', 'name', 'isActive');
         res.json(products);
     } catch (error) {
         res.status(500).json({ error: 'Error fetching products' });
@@ -227,7 +227,7 @@ app.get('/products', async (req, res) => {
 
 app.get('/stores/:storeId/products', async (req, res) => {
     try {
-        const products = await Product.find({ store: req.params.storeId }).populate('store', 'name');
+        const products = await Product.find({ store: req.params.storeId }).populate('store', 'name', 'isActive');
         res.json(products);
     } catch (error) {
         res.status(500).json({ error: 'Error fetching store products' });
@@ -271,7 +271,7 @@ app.post('/products', async (req, res) => {
         
         const product = new Product(productData);
         await product.save();
-        const populatedProduct = await Product.findById(product._id).populate('store', 'name');
+        const populatedProduct = await Product.findById(product._id).populate('store', 'name', 'isActive');
         res.status(201).json(populatedProduct);
     } catch (error) {
         res.status(500).json({ error: 'Error creating product' });
@@ -313,7 +313,7 @@ app.post('/stores/:storeId/products', async (req, res) => {
         
         const product = new Product(productData);
         await product.save();
-        const populatedProduct = await Product.findById(product._id).populate('store', 'name');
+        const populatedProduct = await Product.findById(product._id).populate('store', 'name', 'isActive');
         res.status(201).json(populatedProduct);
     } catch (error) {
         res.status(500).json({ error: 'Error creating product' });
@@ -322,7 +322,7 @@ app.post('/stores/:storeId/products', async (req, res) => {
 
 app.get('/products/:id', async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id).populate('store', 'name');
+        const product = await Product.findById(req.params.id).populate('store', 'name', 'isActive');
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
         }
@@ -338,7 +338,7 @@ app.put('/products/:id', async (req, res) => {
             req.params.id,
             req.body,
             { new: true, runValidators: true }
-        ).populate('store', 'name');
+        ).populate('store', 'name', 'isActive');
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
         }
