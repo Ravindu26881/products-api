@@ -252,7 +252,7 @@ app.post('/users', async (req, res) => {
         
         // Handle duplicate username error specifically
         if (error.code === 11000) {
-            return res.status(409).json({ error: 'Username already exists' });
+            return res.status(409).json({ error: error });
         }
         
         // Handle validation errors
