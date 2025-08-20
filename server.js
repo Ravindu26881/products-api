@@ -620,4 +620,59 @@ app.get('/orders', async (req, res) => {
     }
 });
 
+// Delete order
+app.delete('/orders/:orderId', async (req, res) => {
+    try {
+        const order = await Order.findOne({ orderId: req.params.orderId });
+        
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        await Order.findByIdAndDelete(order._id);
+        res.json({ message: 'Order deleted successfully', orderId: req.params.orderId });
+    } catch (error) {
+        res.status(500).json({ error: 'Error deleting order' });
+    }
+});
+
+// Update order status
+app.put('/orders/:orderId/status', async (req, res) => {
+    try {
+        const { status } = req.body;
+        
+        if (!status) {
+            return res.status(400).json({ error: 'Status is required' });
+        }
+        
+        // Optional: validate status values
+        const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ 
+                error: 'Invalid status. Valid statuses are: ' + validStatuses.join(', ')
+            });
+        }
+        
+        const order = await Order.findOneAndUpdate(
+            { orderId: req.params.orderId },
+            { status: status },
+            { new: true, runValidators: true }
+        )
+        .populate('productId', 'name price category')
+        .populate('storeId', 'name address')
+        .populate('userId', 'username name email phone');
+        
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        res.json({
+            message: 'Order status updated successfully',
+            order: order
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error updating order status' });
+    }
+});
+
 app.listen(process.env.PORT || 5000);
