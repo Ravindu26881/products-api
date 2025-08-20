@@ -225,7 +225,10 @@ app.post('/users', async (req, res) => {
         }
         
         // Check if username already exists
+        console.log('Checking username:', username);
         const existingUser = await User.findOne({ username: username });
+        console.log('Existing user found:', existingUser ? existingUser.username : 'None');
+        
         if (existingUser) {
             return res.status(409).json({ error: 'Username already exists' });
         }
@@ -265,6 +268,20 @@ app.post('/users', async (req, res) => {
             error: 'Error creating user',
             details: error.message 
         });
+    }
+});
+
+// Temporary debug endpoint to see all usernames
+app.get('/users/debug-usernames', async (req, res) => {
+    try {
+        const users = await User.find({}, 'username');
+        const usernames = users.map(user => user.username);
+        res.json({ 
+            count: users.length,
+            usernames: usernames 
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching usernames' });
     }
 });
 
