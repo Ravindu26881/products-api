@@ -510,18 +510,32 @@ app.delete('/products/:id', async (req, res) => {
 // Create new order
 app.post('/orders', async (req, res) => {
     try {
-        const { productId, storeId, userId, quantity } = req.body;
+        const { products, storeId, userId } = req.body;
         
-        if (!productId || !storeId || !userId) {
-            return res.status(400).json({ error: 'Product ID, Store ID, and User ID are required' });
+        if (!products || !Array.isArray(products) || products.length === 0 || !storeId || !userId) {
+            return res.status(400).json({ 
+                error: 'Products array (with at least one product), Store ID, and User ID are required' 
+            });
         }
         
-        // Verify that the product, store, and user exist
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
+        // Validate products array structure
+        for (const product of products) {
+            if (!product.productId || !product.quantity || product.quantity < 1) {
+                return res.status(400).json({ 
+                    error: 'Each product must have a valid productId and quantity (minimum 1)' 
+                });
+            }
         }
         
+        // Verify that all products exist
+        const productIds = products.map(p => p.productId);
+        const foundProducts = await Product.find({ _id: { $in: productIds } });
+        
+        if (foundProducts.length !== productIds.length) {
+            return res.status(404).json({ error: 'One or more products not found' });
+        }
+        
+        // Verify that the store and user exist
         const store = await Store.findById(storeId);
         if (!store) {
             return res.status(404).json({ error: 'Store not found' });
@@ -537,17 +551,16 @@ app.post('/orders', async (req, res) => {
         
         const order = new Order({
             orderId,
-            productId,
+            products,
             storeId,
-            userId,
-            quantity: quantity || 1
+            userId
         });
         
         await order.save();
         
         // Populate the order with related data
         const populatedOrder = await Order.findById(order._id)
-            .populate('productId', 'name price category')
+            .populate('products.productId', 'name price category')
             .populate('storeId', 'name address')
             .populate('userId', 'username name email phone');
         
@@ -561,7 +574,7 @@ app.post('/orders', async (req, res) => {
 app.get('/orders/:orderId', async (req, res) => {
     try {
         const order = await Order.findOne({ orderId: req.params.orderId })
-            .populate('productId', 'name price category description')
+            .populate('products.productId', 'name price category description')
             .populate('storeId', 'name address phone email')
             .populate('userId', 'username name email phone address');
         
@@ -579,7 +592,7 @@ app.get('/orders/:orderId', async (req, res) => {
 app.get('/stores/:storeId/orders', async (req, res) => {
     try {
         const orders = await Order.find({ storeId: req.params.storeId })
-            .populate('productId', 'name price category')
+            .populate('products.productId', 'name price category')
             .populate('storeId', 'name address')
             .populate('userId', 'username name email phone')
             .sort({ createdAt: -1 });
@@ -594,7 +607,7 @@ app.get('/stores/:storeId/orders', async (req, res) => {
 app.get('/users/:userId/orders', async (req, res) => {
     try {
         const orders = await Order.find({ userId: req.params.userId })
-            .populate('productId', 'name price category')
+            .populate('products.productId', 'name price category')
             .populate('storeId', 'name address')
             .populate('userId', 'username name email phone')
             .sort({ createdAt: -1 });
@@ -609,7 +622,7 @@ app.get('/users/:userId/orders', async (req, res) => {
 app.get('/orders', async (req, res) => {
     try {
         const orders = await Order.find()
-            .populate('productId', 'name price category')
+            .populate('products.productId', 'name price category')
             .populate('storeId', 'name address')
             .populate('userId', 'username name email phone')
             .sort({ createdAt: -1 });
@@ -658,7 +671,7 @@ app.put('/orders/:orderId/status', async (req, res) => {
             { status: status },
             { new: true, runValidators: true }
         )
-        .populate('productId', 'name price category')
+        .populate('products.productId', 'name price category')
         .populate('storeId', 'name address')
         .populate('userId', 'username name email phone');
         
