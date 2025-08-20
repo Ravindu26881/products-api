@@ -245,7 +245,26 @@ app.post('/users', async (req, res) => {
         const { password: _, ...userResponse } = user.toObject();
         res.status(201).json(userResponse);
     } catch (error) {
-        res.status(500).json({ error: 'Error creating user' });
+        console.error('User creation error:', error);
+        
+        // Handle duplicate username error specifically
+        if (error.code === 11000) {
+            return res.status(409).json({ error: 'Username already exists' });
+        }
+        
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            const validationErrors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({ 
+                error: 'Validation failed', 
+                details: validationErrors 
+            });
+        }
+        
+        res.status(500).json({ 
+            error: 'Error creating user',
+            details: error.message 
+        });
     }
 });
 
