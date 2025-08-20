@@ -224,14 +224,14 @@ app.post('/users', async (req, res) => {
             return res.status(400).json({ error: 'Username and password are required' });
         }
         
-        // Check if username already exists
-        console.log('Checking username:', username);
-        const existingUser = await User.findOne({ username: username });
-        console.log('Existing user found:', existingUser ? existingUser.username : 'None');
+        // // Check if username already exists
+        // console.log('Checking username:', username);
+        // const existingUser = await User.findOne({ username: username });
+        // console.log('Existing user found:', existingUser ? existingUser.username : 'None');
         
-        if (existingUser) {
-            return res.status(409).json({ error: 'Username already exists' });
-        }
+        // if (existingUser) {
+        //     return res.status(409).json({ error: 'Username already exists' });
+        // }
         
         const user = new User({
             username,
